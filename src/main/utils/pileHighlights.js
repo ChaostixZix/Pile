@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const glob = require('glob');
 const matter = require('gray-matter');
 
 const defaultHighlights = new Map([
@@ -9,6 +8,14 @@ const defaultHighlights = new Map([
   ['New idea', { color: '#017AFF', posts: [] }],
 ]);
 
+const sortMap = (map) => {
+  const sortedMap = new Map(
+    [...map.entries()].sort((a, b) => a[1].posts.length - b[1].posts.length),
+  );
+
+  return sortedMap;
+};
+
 class PileHighlights {
   constructor() {
     this.fileName = 'highlights.json';
@@ -16,33 +23,24 @@ class PileHighlights {
     this.highlights = new Map();
   }
 
-  sortMap(map) {
-    let sortedMap = new Map(
-      [...map.entries()].sort((a, b) => a[1].posts.length - b[1].posts.length)
-    );
-
-    return sortedMap;
-  }
-
   load(pilePath) {
-    if (!pilePath) return;
+    if (!pilePath) return this.highlights;
     this.pilePath = pilePath;
     const highlightsFilePath = path.join(this.pilePath, this.fileName);
 
     if (fs.existsSync(highlightsFilePath)) {
       const data = fs.readFileSync(highlightsFilePath);
       const loadedHighlights = new Map(JSON.parse(data));
-      const sortedHighlights = this.sortMap(loadedHighlights);
+      const sortedHighlights = sortMap(loadedHighlights);
 
       this.highlights = sortedHighlights;
 
       return this.highlights;
-    } else {
-      // save to initialize an empty index
-      this.highlights = defaultHighlights;
-      this.save();
-      return this.highlights;
     }
+    // save to initialize an empty index
+    this.highlights = defaultHighlights;
+    this.save();
+    return this.highlights;
   }
 
   get() {
@@ -51,7 +49,7 @@ class PileHighlights {
 
   sync(filePath) {
     const fileContent = fs.readFileSync(filePath, 'utf8');
-    const { data, content } = matter(fileContent);
+    const { data } = matter(fileContent);
     const tags = data.tags || [];
 
     if (!tags) return;
@@ -61,23 +59,20 @@ class PileHighlights {
     });
   }
 
-  create(highlight, filePath) {
-    if (this.highlights.has(highlight)) {
-      return;
+  create(highlight) {
+    if (!this.highlights.has(highlight)) {
+      // create a new highlight
+      const newHighlight = { color: null, icon: null, posts: [] };
+      this.highlights.set(highlight, newHighlight);
+      this.save();
     }
-
-    // create a new highlight
-    const newHighlight = { color: null, icon: null, posts: [] };
-    this.highlights.set(tag, newHighlight);
-
-    this.save();
 
     return this.highlights;
   }
 
   delete(highlight) {
     if (this.highlights.has(highlight)) {
-      let updatedHighlight = this.highlights.get(highlight);
+      const updatedHighlight = this.highlights.get(highlight);
       this.highlights.set(highlight, updatedHighlight);
 
       // Todo: delete this tag from all the posts before
@@ -96,14 +91,14 @@ class PileHighlights {
     }
 
     const highlightsFilePath = path.join(this.pilePath, this.fileName);
-    const sortedHighlights = this.sortMap(this.highlights);
+    const sortedHighlights = sortMap(this.highlights);
 
     this.highlights = sortedHighlights;
     const entries = this.highlights.entries();
 
     if (!entries) return;
 
-    let strMap = JSON.stringify(Array.from(entries));
+    const strMap = JSON.stringify(Array.from(entries));
 
     fs.writeFileSync(highlightsFilePath, strMap);
   }

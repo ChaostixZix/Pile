@@ -1,10 +1,8 @@
 const fs = require('fs');
 const axios = require('axios');
 const path = require('path');
-const { walk } = require('../util');
 const matter = require('gray-matter');
-const settings = require('electron-settings');
-const {getKey} = require('../utils/store');
+const { getKey } = require('./store');
 
 // Todo: Cache the norms alongside embeddings at some point
 // to avoid recomputing them for every query
@@ -17,11 +15,11 @@ function cosineSimilarity(embedding, queryEmbedding) {
   let normA = 0;
   let normB = 0;
 
-  for (let i = 0; i < embedding.length; i++) {
-    dotProduct += embedding[i] * queryEmbedding[i];
-    normA += embedding[i] ** 2;
-    normB += queryEmbedding[i] ** 2;
-  }
+  embedding.forEach((value, index) => {
+    dotProduct += value * queryEmbedding[index];
+    normA += value ** 2;
+    normB += queryEmbedding[index] ** 2;
+  });
 
   normA = Math.sqrt(normA);
   normB = Math.sqrt(normB);
@@ -39,8 +37,6 @@ class PileEmbeddings {
     this.fileName = `embeddings.json`;
     this.apiKey = null;
     this.embeddings = new Map();
-
-
   }
 
   async initialize(pilePath, index) {
@@ -50,9 +46,9 @@ class PileEmbeddings {
 
       if (!this.apiKey) {
         console.log(
-          'API key not found. Please set it first to use AI features.'
+          'API key not found. Please set it first to use AI features.',
         );
-        return;
+        return {};
       }
       const embeddingsFilePath = path.join(pilePath, this.fileName);
       if (fs.existsSync(embeddingsFilePath)) {
@@ -80,9 +76,9 @@ class PileEmbeddings {
   async walkAndGenerateEmbeddings(pilePath, index) {
     console.log('🧮 Generating embeddings for index:', index.size);
     this.embeddings = new Map();
-    for (let [entryPath, metadata] of index) {
+    Array.from(index.entries()).forEach(([entryPath, metadata]) => {
       this.addDocument(entryPath, metadata);
-    }
+    });
   }
 
   saveEmbeddings() {
@@ -90,7 +86,7 @@ class PileEmbeddings {
       const embeddingsFilePath = path.join(this.pilePath, this.fileName);
       const entries = this.embeddings.entries();
       if (!entries) return;
-      let strMap = JSON.stringify(Array.from(entries));
+      const strMap = JSON.stringify(Array.from(entries));
       fs.writeFileSync(embeddingsFilePath, strMap, 'utf8');
     } catch (error) {
       console.error('Failed to save embeddings:', error);
@@ -103,19 +99,18 @@ class PileEmbeddings {
       // the replies are concatenated to the contents
       if (metadata.isReply) return;
 
-      let fullPath = path.join(this.pilePath, entryPath);
-      let fileContent = fs.readFileSync(fullPath, 'utf8');
+      const fullPath = path.join(this.pilePath, entryPath);
+      const fileContent = fs.readFileSync(fullPath, 'utf8');
       let { content } = matter(fileContent);
-      content =
-        'Entry on ' + metadata.createdAt + '\n\n' + content + '\n\nReplies:\n';
+      content = `Entry on ${metadata.createdAt}\n\n${content}\n\nReplies:\n`;
 
       // concat the contents of replies
-      for (let replyPath of metadata.replies) {
-        let replyFullPath = path.join(this.pilePath, replyPath);
-        let replyFileContent = fs.readFileSync(replyFullPath, 'utf8');
-        let { content: replyContent } = matter(replyFileContent);
-        content += '\n' + replyContent;
-      }
+      metadata.replies.forEach((replyPath) => {
+        const replyFullPath = path.join(this.pilePath, replyPath);
+        const replyFileContent = fs.readFileSync(replyFullPath, 'utf8');
+        const { content: replyContent } = matter(replyFileContent);
+        content += `\n${replyContent}`;
+      });
 
       try {
         const embedding = await this.generateEmbedding(content);
@@ -124,7 +119,7 @@ class PileEmbeddings {
       } catch (embeddingError) {
         console.warn(
           `Failed to generate embedding for thread: ${entryPath}`,
-          embeddingError
+          embeddingError,
         );
         // Skip this document and continue with the next one
         return;
@@ -136,54 +131,34 @@ class PileEmbeddings {
     }
   }
 
-  // todo: based on which ai is configured this should either
-  // use ollama or openai
   async generateEmbedding(document) {
-    const pileAIProvider = await settings.get('pileAIProvider');
-    const embeddingModel = await settings.get('embeddingModel');
-    const isOllama = pileAIProvider === 'ollama';
+    const url = 'https://api.openai.com/v1/embeddings';
+    const headers = {
+      Authorization: `Bearer ${this.apiKey}`,
+      'Content-Type': 'application/json',
+    };
+    const data = {
+      model: 'text-embedding-3-small',
+      input: document,
+    };
 
-    if (isOllama) {
-      const url = 'http://127.0.0.1:11434/api/embed';
-      const data = {
-        model: 'mxbai-embed-large',
-        input: document,
-      };
-      try {
-        const response = await axios.post(url, data);
-        const embeddings = response.data.embeddings;
-        return response.data.embeddings[0];
-      } catch (error) {
-        console.error('Error generating embedding with Ollama:', error);
-        return null;
-      }
-    } else {
-      const url = 'https://api.openai.com/v1/embeddings';
-      const headers = {
-        Authorization: `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-      };
-      const data = {
-        model: 'text-embedding-3-small',
-        input: document,
-      };
-
-      try {
-        const response = await axios.post(url, data, { headers });
-        return response.data.data[0].embedding;
-      } catch (error) {
-        console.error('Error generating embedding with OpenAI:', error);
-        return null;
-      }
+    try {
+      const response = await axios.post(url, data, { headers });
+      return response.data.data[0].embedding;
+    } catch (error) {
+      console.error('Error generating embedding with OpenAI:', error);
+      return null;
     }
   }
 
   async regenerateEmbeddings(index) {
     console.log('🧮 Regenerating embeddings for index:', index.size);
     this.embeddings.clear();
-    for (let [entryPath, metadata] of index) {
-      await this.addDocument(entryPath, metadata);
-    }
+    await Array.from(index.entries()).reduce(
+      (promise, [entryPath, metadata]) =>
+        promise.then(() => this.addDocument(entryPath, metadata)),
+      Promise.resolve(),
+    );
     this.saveEmbeddings();
     console.log('✅ Embeddings regeneration complete');
   }
@@ -196,9 +171,9 @@ class PileEmbeddings {
       return [];
     }
 
-    let scores = [];
+    const scores = [];
     this.embeddings.forEach((embedding, entryPath) => {
-      let score = cosineSimilarity(embedding, queryEmbedding);
+      const score = cosineSimilarity(embedding, queryEmbedding);
       scores.push({ entryPath, score });
     });
 

@@ -1,4 +1,5 @@
-export const OpenBookIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function OpenBookIcon(props) {
   return (
     <svg
       {...props}
@@ -34,4 +35,4 @@ export const OpenBookIcon = (props) => {
       />
     </svg>
   );
-};
+}

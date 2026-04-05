@@ -1,4 +1,5 @@
-export const HighlightIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function HighlightIcon(props) {
   return (
     <svg
       width="800"
@@ -14,4 +15,4 @@ export const HighlightIcon = (props) => {
       />
     </svg>
   );
-};
+}

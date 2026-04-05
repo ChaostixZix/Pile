@@ -13,11 +13,11 @@ class PileLinks {
   }
 
   load(pilePath) {
-    if (!pilePath) return;
+    if (!pilePath) return this.links;
 
     // skip loading
     if (pilePath === this.pilePath) {
-      return;
+      return this.links;
     }
 
     // a different pile is being loaded
@@ -34,10 +34,9 @@ class PileLinks {
       this.links = loadedIndex;
 
       return loadedIndex;
-    } else {
-      this.save();
-      return this.links;
     }
+    this.save();
+    return this.links;
   }
 
   get(pilePath, url) {
@@ -69,7 +68,7 @@ class PileLinks {
 
     if (!entries) return;
 
-    let strMap = JSON.stringify(Array.from(entries));
+    const strMap = JSON.stringify(Array.from(entries));
     fs.writeFileSync(filePath, strMap);
   }
 }

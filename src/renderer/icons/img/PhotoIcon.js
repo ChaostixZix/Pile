@@ -1,4 +1,5 @@
-export const PhotoIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function PhotoIcon(props) {
   return (
     <svg
       {...props}
@@ -14,4 +15,4 @@ export const PhotoIcon = (props) => {
       </g>
     </svg>
   );
-};
+}

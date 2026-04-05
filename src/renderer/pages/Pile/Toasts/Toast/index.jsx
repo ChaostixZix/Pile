@@ -1,11 +1,11 @@
-import styles from './Toast.module.scss';
+/* eslint-disable react/prop-types */
 import { motion } from 'framer-motion';
-import { useToastsContext } from 'renderer/context/ToastsContext';
-import Logo from 'renderer/pages/Home/logo';
+import { PaperclipIcon, WarningIcon } from 'renderer/icons';
+import styles from './Toast.module.scss';
 import Thinking from './Loaders/Thinking';
 import Waiting from './Loaders/Waiting';
 import Info from './Loaders/Info';
-import { PaperclipIcon, SmileIcon, WarningIcon } from 'renderer/icons';
+
 export default function Toast({ notification }) {
   const renderIcon = (type) => {
     switch (type) {

@@ -1,17 +1,17 @@
 import { useParams } from 'react-router-dom';
-import styles from '../Post.module.scss';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useEffect, useState } from 'react';
 import { DateTime } from 'luxon';
 import { postFormat } from 'renderer/utils/fileOperations';
-import Editor from '../../../Editor';
 import * as fileOperations from 'renderer/utils/fileOperations';
 import { usePilesContext } from 'renderer/context/PilesContext';
 import usePost from 'renderer/hooks/usePost';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AIIcon } from 'renderer/icons';
+import Editor from '../../../Editor';
+import styles from '../Post.module.scss';
 
 export default function Reply({
   postPath,
@@ -40,9 +40,7 @@ export default function Reply({
     <div>
       <div className={styles.post}>
         <div className={styles.left}>
-          <div
-            className={`${styles.connector} ${isFirst && styles.first}`}
-          ></div>
+          <div className={`${styles.connector} ${isFirst && styles.first}`} />
 
           <div
             className={`${styles.ball} ${isAI && styles.ai}`}
@@ -60,7 +58,7 @@ export default function Reply({
             style={{
               borderColor: highlightColor ?? 'var(--border)',
             }}
-          ></div>
+          />
         </div>
         <div className={styles.right}>
           <div className={styles.header}>

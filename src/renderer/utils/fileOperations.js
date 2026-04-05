@@ -19,7 +19,7 @@ const getDirectoryPath = (filePath) => {
   let directoryPath = window.electron.joinPath(...pathArr);
 
   if (isAbsolute && !directoryPath.startsWith('/')) {
-    directoryPath = '/' + directoryPath;
+    directoryPath = `/${directoryPath}`;
   }
 
   return directoryPath;
@@ -40,7 +40,7 @@ const getFormattedTimestamp = () => {
   return fileName;
 };
 
-const getFilePathForNewPost = (basePath, timestamp = new Date()) => {
+const getFilePathForNewPost = (basePath) => {
   const date = new Date();
   const month = date.toLocaleString('default', { month: 'short' });
   const year = date.getFullYear().toString();

@@ -1,4 +1,5 @@
-export const CheckboxIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function CheckboxIcon(props) {
   return (
     <svg
       width="1024"
@@ -18,4 +19,4 @@ export const CheckboxIcon = (props) => {
       />
     </svg>
   );
-};
+}

@@ -1,4 +1,5 @@
-export const FolderIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function FolderIcon(props) {
   return (
     <svg
       {...props}
@@ -20,4 +21,4 @@ export const FolderIcon = (props) => {
       </g>
     </svg>
   );
-};
+}

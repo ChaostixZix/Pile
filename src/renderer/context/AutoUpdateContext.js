@@ -1,9 +1,17 @@
-import React, { useState, createContext, useEffect, useContext } from 'react';
+/* eslint react/prop-types: 0 */
+import {
+  useState,
+  createContext,
+  useEffect,
+  useContext,
+  useCallback,
+  useMemo,
+} from 'react';
 import { useToastsContext } from './ToastsContext';
 
 export const AutoUpdateContext = createContext();
 
-export const AutoUpdateContextProvider = ({ children }) => {
+export function AutoUpdateContextProvider({ children }) {
   const { addNotification, removeNotification } = useToastsContext();
 
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -11,7 +19,7 @@ export const AutoUpdateContextProvider = ({ children }) => {
   const [updateError, setUpdateError] = useState(null);
   const [updateNotAvailable, setUpdateNotAvailable] = useState(false);
 
-  const handleUpdateAvailable = () => {
+  const handleUpdateAvailable = useCallback(() => {
     addNotification({
       id: 'auto-update',
       message: 'Update available',
@@ -26,25 +34,28 @@ export const AutoUpdateContextProvider = ({ children }) => {
     });
 
     setUpdateAvailable(true);
-  };
+  }, [addNotification]);
 
-  const handleUpdateDownloaded = () => {
+  const handleUpdateDownloaded = useCallback(() => {
     removeNotification('auto-update');
     setUpdateDownloaded(true);
-  };
+  }, [removeNotification]);
 
-  const handleUpdateError = (error) => {
-    addNotification({
-      id: 'auto-update',
-      type: 'failed',
-      message: 'Auto update failed',
-      dismissTime: 5000,
-    });
+  const handleUpdateError = useCallback(
+    (error) => {
+      addNotification({
+        id: 'auto-update',
+        type: 'failed',
+        message: 'Auto update failed',
+        dismissTime: 5000,
+      });
 
-    setUpdateError(error);
-  };
+      setUpdateError(error);
+    },
+    [addNotification],
+  );
 
-  const handleUpdateNotAvailable = () => {
+  const handleUpdateNotAvailable = useCallback(() => {
     addNotification({
       id: 'auto-update',
       message: 'Pile is up-to-date',
@@ -54,10 +65,12 @@ export const AutoUpdateContextProvider = ({ children }) => {
     });
 
     setUpdateNotAvailable(true);
-  };
+  }, [addNotification]);
 
   useEffect(() => {
-    if (!window) return;
+    if (!window) {
+      return undefined;
+    }
 
     window.electron.ipc.on('update_available', handleUpdateAvailable);
     window.electron.ipc.on('update_downloaded', handleUpdateDownloaded);
@@ -67,38 +80,52 @@ export const AutoUpdateContextProvider = ({ children }) => {
     return () => {
       window.electron.ipc.removeListener(
         'update_available',
-        handleUpdateAvailable
+        handleUpdateAvailable,
       );
       window.electron.ipc.removeListener(
         'update_downloaded',
-        handleUpdateDownloaded
+        handleUpdateDownloaded,
       );
       window.electron.ipc.removeListener('update_error', handleUpdateError);
       window.electron.ipc.removeListener(
         'update_not_available',
-        handleUpdateNotAvailable
+        handleUpdateNotAvailable,
       );
     };
-  }, []);
+  }, [
+    handleUpdateAvailable,
+    handleUpdateDownloaded,
+    handleUpdateError,
+    handleUpdateNotAvailable,
+  ]);
 
-  const restartAndUpdate = () => {
+  const restartAndUpdate = useCallback(() => {
     if (!window) return;
     window.electron.ipc.sendMessage('restart_app');
-  };
+  }, []);
 
-  const autoUpdateContextValue = {
-    updateAvailable,
-    updateDownloaded,
-    updateError,
-    updateNotAvailable,
-    restartAndUpdate,
-  };
+  const autoUpdateContextValue = useMemo(
+    () => ({
+      updateAvailable,
+      updateDownloaded,
+      updateError,
+      updateNotAvailable,
+      restartAndUpdate,
+    }),
+    [
+      updateAvailable,
+      updateDownloaded,
+      updateError,
+      updateNotAvailable,
+      restartAndUpdate,
+    ],
+  );
 
   return (
     <AutoUpdateContext.Provider value={autoUpdateContextValue}>
       {children}
     </AutoUpdateContext.Provider>
   );
-};
+}
 
 export const useAutoUpdateContext = () => useContext(AutoUpdateContext);

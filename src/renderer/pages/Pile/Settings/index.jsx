@@ -1,5 +1,4 @@
-import styles from './Settings.module.scss';
-import { SettingsIcon, CrossIcon, OllamaIcon } from 'renderer/icons';
+import { SettingsIcon, CrossIcon } from 'renderer/icons';
 import { useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useAIContext } from 'renderer/context/AIContext';
@@ -7,48 +6,23 @@ import {
   availableThemes,
   usePilesContext,
 } from 'renderer/context/PilesContext';
+import styles from './Settings.module.scss';
 import AISettingTabs from './AISettingsTabs';
-import { useIndexContext } from 'renderer/context/IndexContext';
 
 export default function Settings() {
-  const { regenerateEmbeddings } = useIndexContext();
-  const {
-    ai,
-    prompt,
-    setPrompt,
-    updateSettings,
-    setBaseUrl,
-    getKey,
-    setKey,
-    deleteKey,
-    model,
-    setModel,
-    ollama,
-    baseUrl,
-  } = useAIContext();
+  const { prompt, setPrompt, updateSettings, getKey, setKey, deleteKey } =
+    useAIContext();
   const [APIkey, setCurrentKey] = useState('');
   const { currentTheme, setTheme } = usePilesContext();
 
-  const retrieveKey = async () => {
-    const k = await getKey();
-    setCurrentKey(k);
-  };
-
   useEffect(() => {
+    const retrieveKey = async () => {
+      const key = await getKey();
+      setCurrentKey(key);
+    };
+
     retrieveKey();
-  }, []);
-
-  const handleOnChangeBaseUrl = (e) => {
-    setBaseUrl(e.target.value);
-  };
-
-  const handleOnChangeModel = (e) => {
-    setModel(e.target.value);
-  };
-
-  const handleOnChangeKey = (e) => {
-    setCurrentKey(e.target.value);
-  };
+  }, [getKey]);
 
   const handleOnChangePrompt = (e) => {
     const p = e.target.value ?? '';
@@ -56,10 +30,9 @@ export default function Settings() {
   };
 
   const handleSaveChanges = () => {
-    if (!APIkey || APIkey == '') {
+    if (!APIkey || APIkey === '') {
       deleteKey();
     } else {
-      console.log('save key', APIkey);
       setKey(APIkey);
     }
 
@@ -68,13 +41,15 @@ export default function Settings() {
   };
 
   const renderThemes = () => {
-    return Object.keys(availableThemes).map((theme, index) => {
+    return Object.keys(availableThemes).map((theme) => {
       const colors = availableThemes[theme];
       return (
         <button
           key={`theme-${theme}`}
+          type="button"
+          aria-label={`Use ${theme} theme`}
           className={`${styles.theme} ${
-            currentTheme == theme && styles.current
+            currentTheme === theme ? styles.current : ''
           }`}
           onClick={() => {
             setTheme(theme);
@@ -83,7 +58,7 @@ export default function Settings() {
           <div
             className={styles.color1}
             style={{ background: colors.primary }}
-          ></div>
+          />
         </button>
       );
     });
@@ -100,29 +75,26 @@ export default function Settings() {
         <Dialog.Content className={styles.DialogContent}>
           <Dialog.Title className={styles.DialogTitle}>Settings</Dialog.Title>
           <fieldset className={styles.Fieldset}>
-            <label className={styles.Label} htmlFor="name">
-              Appearance
-            </label>
+            <legend className={styles.Label}>Appearance</legend>
             <div className={styles.themes}>{renderThemes()}</div>
           </fieldset>
 
           <fieldset className={styles.Fieldset}>
-            <label className={styles.Label} htmlFor="name">
-              Select your AI provider
-            </label>
+            <legend className={styles.Label}>AI configuration</legend>
             <AISettingTabs APIkey={APIkey} setCurrentKey={setCurrentKey} />
           </fieldset>
 
           <fieldset className={styles.Fieldset}>
-            <label className={styles.Label} htmlFor="name">
+            <label className={styles.Label} htmlFor="ai-personality-prompt">
               AI personality prompt
+              <textarea
+                id="ai-personality-prompt"
+                className={styles.Textarea}
+                placeholder="Enter your own prompt for AI reflections"
+                value={prompt}
+                onChange={handleOnChangePrompt}
+              />
             </label>
-            <textarea
-              className={styles.Textarea}
-              placeholder="Enter your own prompt for AI reflections"
-              value={prompt}
-              onChange={handleOnChangePrompt}
-            />
           </fieldset>
           <div
             style={{
@@ -132,13 +104,21 @@ export default function Settings() {
             }}
           >
             <Dialog.Close asChild>
-              <button className={styles.Button} onClick={handleSaveChanges}>
+              <button
+                type="button"
+                className={styles.Button}
+                onClick={handleSaveChanges}
+              >
                 Save changes
               </button>
             </Dialog.Close>
           </div>
           <Dialog.Close asChild>
-            <button className={styles.IconButton} aria-label="Close">
+            <button
+              type="button"
+              className={styles.IconButton}
+              aria-label="Close"
+            >
               <CrossIcon />
             </button>
           </Dialog.Close>

@@ -1,4 +1,5 @@
-export const WarningIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function WarningIcon(props) {
   return (
     <svg
       {...props}
@@ -7,7 +8,7 @@ export const WarningIcon = (props) => {
       viewBox="0 0 21 21"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <g fill="none" fill-rule="evenodd">
+      <g fill="none" fillRule="evenodd">
         <circle
           cx="10.5"
           cy="10.5"
@@ -26,4 +27,4 @@ export const WarningIcon = (props) => {
       </g>
     </svg>
   );
-};
+}

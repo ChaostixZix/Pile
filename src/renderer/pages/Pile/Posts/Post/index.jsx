@@ -1,17 +1,14 @@
 import { useEffect, useState, useCallback, useRef, memo, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import styles from './Post.module.scss';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { DateTime } from 'luxon';
 import { postFormat } from 'renderer/utils/fileOperations';
-import Editor from '../../Editor';
 import * as fileOperations from 'renderer/utils/fileOperations';
 import { usePilesContext } from 'renderer/context/PilesContext';
 import usePost from 'renderer/hooks/usePost';
 import { AnimatePresence, motion } from 'framer-motion';
-import Reply from './Reply';
 import {
   AIIcon,
   EditIcon,
@@ -20,9 +17,12 @@ import {
   ReflectIcon,
 } from 'renderer/icons';
 import { useTimelineContext } from 'renderer/context/TimelineContext';
-import Ball from './Ball';
 import { useHighlightsContext } from 'renderer/context/HighlightsContext';
 import { useAIContext } from 'renderer/context/AIContext';
+import Ball from './Ball';
+import Reply from './Reply';
+import Editor from '../../Editor';
+import styles from './Post.module.scss';
 
 const Post = memo(({ postPath, searchTerm = null, repliesCount = 0 }) => {
   const { currentPile, getCurrentPilePath } = usePilesContext();
@@ -114,7 +114,7 @@ const Post = memo(({ postPath, searchTerm = null, repliesCount = 0 }) => {
     >
       <div className={styles.post}>
         <div className={styles.left}>
-          {post.data.isReply && <div className={styles.connector}></div>}
+          {post.data.isReply && <div className={styles.connector} />}
           <Ball
             isAI={isAI}
             highlightColor={highlightColor}
@@ -128,7 +128,7 @@ const Post = memo(({ postPath, searchTerm = null, repliesCount = 0 }) => {
             style={{
               borderColor: highlightColor,
             }}
-          ></div>
+          />
         </div>
         <div className={styles.right}>
           <div className={styles.header}>
@@ -201,7 +201,7 @@ const Post = memo(({ postPath, searchTerm = null, repliesCount = 0 }) => {
                   style={{
                     backgroundColor: highlightColor,
                   }}
-                ></div>
+                />
                 <div
                   className={`${styles.ball} ${isAIResplying && styles.ai}`}
                   style={{

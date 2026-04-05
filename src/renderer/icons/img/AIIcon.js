@@ -1,4 +1,5 @@
-export const AIIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function AIIcon(props) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
       <g>
@@ -8,4 +9,4 @@ export const AIIcon = (props) => {
       </g>
     </svg>
   );
-};
+}

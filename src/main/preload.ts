@@ -4,7 +4,7 @@ import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 
-export type Channels = 'ipc-example';
+export type Channels = string;
 
 const electronHandler = {
   ipc: {
@@ -31,8 +31,8 @@ const electronHandler = {
       ipcRenderer.removeListener(channel, func);
     },
   },
-  setupPilesFolder: (path: string) => {
-    fs.existsSync(path);
+  setupPilesFolder: (folderPath: string) => {
+    fs.existsSync(folderPath);
   },
   getConfigPath: () => {
     return ipcRenderer.sendSync('get-config-file-path');
@@ -42,24 +42,25 @@ const electronHandler = {
       shell.openPath(folderPath);
     }
   },
-  existsSync: (path: string) => fs.existsSync(path),
-  readDir: (path: string, callback: any) => fs.readdir(path, callback),
-  isDirEmpty: (path: string) =>
-    fs.readdir(path, (err, files) => {
+  existsSync: (targetPath: string) => fs.existsSync(targetPath),
+  readDir: (targetPath: string, callback: any) =>
+    fs.readdir(targetPath, callback),
+  isDirEmpty: (targetPath: string) =>
+    fs.readdir(targetPath, (err, files) => {
       if (err) throw err;
       if (files.length === 0) {
         return true;
-      } else {
-        return false;
       }
+      return false;
     }),
-  readFile: (path: string, callback: any) =>
-    fs.readFile(path, 'utf-8', callback),
-  deleteFile: (path: string, callback: any) => fs.unlink(path, callback),
-  writeFile: (path: string, data: any, callback: any) =>
-    fs.writeFile(path, data, 'utf-8', callback),
-  mkdir: (path: string) =>
-    fs.promises.mkdir(path, {
+  readFile: (targetPath: string, callback: any) =>
+    fs.readFile(targetPath, 'utf-8', callback),
+  deleteFile: (targetPath: string, callback: any) =>
+    fs.unlink(targetPath, callback),
+  writeFile: (targetPath: string, data: any, callback: any) =>
+    fs.writeFile(targetPath, data, 'utf-8', callback),
+  mkdir: (targetPath: string) =>
+    fs.promises.mkdir(targetPath, {
       recursive: true,
     }),
   joinPath: (...args: any) => path.join(...args),
@@ -69,6 +70,8 @@ const electronHandler = {
   settingsGet: (key: string) => ipcRenderer.invoke('electron-store-get', key),
   settingsSet: (key: string, value: string) =>
     ipcRenderer.invoke('electron-store-set', key, value),
+  settingsUnset: (key: string) =>
+    ipcRenderer.invoke('electron-store-unset', key),
 };
 
 contextBridge.exposeInMainWorld('electron', electronHandler);

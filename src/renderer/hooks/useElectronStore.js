@@ -1,12 +1,22 @@
+/* eslint-disable import/prefer-default-export */
 import { useState, useCallback, useEffect } from 'react';
 
 export function useElectronStore(key, initialValue) {
   const [storedValue, setStoredValue] = useState(initialValue);
 
   useEffect(() => {
-    window.electron.settingsGet(key).then((value) => {
-      if (value !== undefined) setStoredValue(value);
-    });
+    const loadValue = async () => {
+      try {
+        const value = await window.electron.settingsGet(key);
+        if (value !== undefined) {
+          setStoredValue(value);
+        }
+      } catch {
+        // ignore read failures and keep current state
+      }
+    };
+
+    loadValue();
   }, [key]);
 
   const setValue = useCallback(
@@ -15,7 +25,7 @@ export function useElectronStore(key, initialValue) {
       setStoredValue(newValue);
       window.electron.settingsSet(key, newValue);
     },
-    [key, storedValue]
+    [key, storedValue],
   );
 
   return [storedValue, setValue];

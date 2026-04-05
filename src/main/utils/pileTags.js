@@ -1,7 +1,14 @@
 const fs = require('fs');
 const path = require('path');
-const glob = require('glob');
 const matter = require('gray-matter');
+
+const sortMap = (map) => {
+  const sortedMap = new Map(
+    [...map.entries()].sort((a, b) => a[1].posts.length - b[1].posts.length),
+  );
+
+  return sortedMap;
+};
 
 class PileTags {
   constructor() {
@@ -10,32 +17,23 @@ class PileTags {
     this.tags = new Map();
   }
 
-  sortMap(map) {
-    let sortedMap = new Map(
-      [...map.entries()].sort((a, b) => a[1].posts.length - b[1].posts.length)
-    );
-
-    return sortedMap;
-  }
-
   load(pilePath) {
-    if (!pilePath) return;
+    if (!pilePath) return this.tags;
     this.pilePath = pilePath;
     const tagsFilePath = path.join(this.pilePath, this.fileName);
 
     if (fs.existsSync(tagsFilePath)) {
       const data = fs.readFileSync(tagsFilePath);
       const loadedTags = new Map(JSON.parse(data));
-      const sortedTags = this.sortMap(loadedTags);
+      const sortedTags = sortMap(loadedTags);
 
       this.tags = sortedTags;
 
       return this.tags;
-    } else {
-      // save to initialize an empty index
-      this.save();
-      return this.tags;
     }
+    // save to initialize an empty index
+    this.save();
+    return this.tags;
   }
 
   get() {
@@ -44,7 +42,7 @@ class PileTags {
 
   sync(filePath) {
     const fileContent = fs.readFileSync(filePath, 'utf8');
-    const { data, content } = matter(fileContent);
+    const { data } = matter(fileContent);
     const tags = data.tags || [];
 
     if (!tags) return;
@@ -56,10 +54,10 @@ class PileTags {
 
   add(tag, filePath) {
     const fileContent = fs.readFileSync(filePath, 'utf8');
-    const { data, content } = matter(fileContent);
+    matter(fileContent);
 
     if (this.tags.has(tag)) {
-      let updatedTag = this.tags.get(tag);
+      const updatedTag = this.tags.get(tag);
       if (!updatedTag.posts.includes(tag)) {
         updatedTag.posts.push(filePath);
         this.tags.set(tag, updatedTag);
@@ -76,7 +74,7 @@ class PileTags {
 
   remove(tag, filePath) {
     if (this.tags.has(tag)) {
-      let updatedTag = this.tags.get(tag);
+      const updatedTag = this.tags.get(tag);
       updatedTag.posts = updatedTag.posts.filter((f) => f !== filePath);
       this.tags.set(tag, updatedTag);
       this.save();
@@ -92,14 +90,14 @@ class PileTags {
     }
 
     const tagsPath = path.join(this.pilePath, this.fileName);
-    const sortedTags = this.sortMap(this.tags);
+    const sortedTags = sortMap(this.tags);
 
     this.tags = sortedTags;
     const entries = this.tags.entries();
 
     if (!entries) return;
 
-    let strMap = JSON.stringify(Array.from(entries));
+    const strMap = JSON.stringify(Array.from(entries));
 
     fs.writeFileSync(tagsPath, strMap);
   }

@@ -19,11 +19,11 @@ export const getLinkPreview = async (url) => {
           Accept: 'text/html',
         },
       })
-      .then((response) => {
-        const contentType = response.headers['content-type'];
+      .then((previewResponse) => {
+        const contentType = previewResponse.headers['content-type'];
         console.log('Not HTML/Text content', contentType);
         if (contentType && contentType.includes('text/html')) {
-          return response;
+          return previewResponse;
         }
         throw new Error('Not HTML/Text content');
       });
@@ -32,7 +32,7 @@ export const getLinkPreview = async (url) => {
     const $ = cheerio.load(html);
     const parsedUrl = new URL(url);
 
-    let meta = {
+    const meta = {
       title: '',
       images: [],
       host: parsedUrl.host,
@@ -54,14 +54,21 @@ export const getLinkPreview = async (url) => {
     });
 
     // Extract the favicon
+    let faviconFound = false;
     $('link').each((index, element) => {
+      if (faviconFound) {
+        return undefined;
+      }
+
       const rel = $(element).attr('rel')?.toLowerCase();
       const href = $(element).attr('href');
       if (rel && (rel.includes('icon') || rel === 'shortcut icon') && href) {
         // Resolve the favicon URL relative to the host URL
         meta.favicon = new URL(href, parsedUrl.origin).href;
-        return false;
+        faviconFound = true;
       }
+
+      return undefined;
     });
 
     return meta;
@@ -71,28 +78,6 @@ export const getLinkPreview = async (url) => {
   }
 };
 
-const getContentHeuristics = (html) => {
-  const $ = cheerio.load(html);
-  let maxDensity = 0;
-  let mainContent = '';
-
-  $('*').each(function () {
-    const text = $(this).clone().children().remove().end().text();
-    const wordCount = text.split(/\s+/).length;
-    const density = wordCount / $(this).text().length;
-
-    // Check if the element has a higher text density and
-    // contains more words than the current max.
-    // 200 is arbitrary
-    if (density > maxDensity && wordCount > 200) {
-      maxDensity = density;
-      mainContent = text;
-    }
-  });
-
-  return mainContent.trim().replace(/\s\s+/g, ' ');
-};
-
 export const getLinkContent = async (url) => {
   try {
     const response = await axios.get(url);
@@ -100,10 +85,10 @@ export const getLinkContent = async (url) => {
 
     // Some content we want to filter out
     $(
-      'script, style, iframe, noscript, nav, header, footer, .nav, .menu, .footer'
+      'script, style, iframe, noscript, nav, header, footer, .nav, .menu, .footer',
     ).remove();
 
-    let contentSections = [];
+    const contentSections = [];
 
     // Targets likely to hold main text content
     const sectionSelectors = 'div, section, article, main, [role="main"]';
@@ -116,7 +101,7 @@ export const getLinkContent = async (url) => {
       if (textLength > 200) {
         contentSections.push({
           html: $(this).html(), // Keep the HTML to preserve images and links
-          textLength: textLength,
+          textLength,
         });
       }
     });
@@ -127,7 +112,7 @@ export const getLinkContent = async (url) => {
     // Concatenate the HTML of the top sections to form the main content.
     // Adjust the number of sections as needed,
     // 3 does well enough for most websites
-    let mainContentHtml = contentSections
+    const mainContentHtml = contentSections
       .slice(0, 3)
       .map((section) => section.html)
       .join(' ');

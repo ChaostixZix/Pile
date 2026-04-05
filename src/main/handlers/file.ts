@@ -1,18 +1,18 @@
 import { ipcMain, app, dialog } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import pileHelper from '../utils/pileHelper';
 import matter from 'gray-matter';
+import pileHelper from '../utils/pileHelper';
 
-ipcMain.on('update-file', (event, { path, content }) => {
-  pileHelper.updateFile(path, content);
+ipcMain.on('update-file', (_event, { path: filePath, content }) => {
+  pileHelper.updateFile(filePath, content);
 });
 
-ipcMain.on('change-folder', (event, newPath) => {
+ipcMain.on('change-folder', (_event, newPath) => {
   pileHelper.changeWatchFolder(newPath);
 });
 
-ipcMain.handle('matter-parse', async (event, file) => {
+ipcMain.handle('matter-parse', async (_event, file) => {
   try {
     const post = matter(file);
     return post;
@@ -21,17 +21,17 @@ ipcMain.handle('matter-parse', async (event, file) => {
   }
 });
 
-ipcMain.handle('matter-stringify', async (event, { content, data }) => {
+ipcMain.handle('matter-stringify', async (_event, { content, data }) => {
   const stringifiedContent = matter.stringify(content, data);
   return stringifiedContent;
 });
 
-ipcMain.handle('get-files', async (event, dirPath) => {
+ipcMain.handle('get-files', async (_event, dirPath) => {
   const files = await pileHelper.getFilesInFolder(dirPath);
   return files;
 });
 
-ipcMain.handle('get-file', async (event, filePath) => {
+ipcMain.handle('get-file', async (_event, filePath) => {
   const content = await pileHelper.getFile(filePath).catch(() => null);
   return content;
 });
@@ -53,7 +53,7 @@ ipcMain.on('open-file-dialog', async (event) => {
 
 ipcMain.handle(
   'save-file',
-  async (event, { fileData, fileExtension, storePath }) => {
+  async (_event, { fileData, fileExtension, storePath }) => {
     try {
       const currentDate = new Date();
       const year = String(currentDate.getFullYear()).slice(-2);
@@ -64,14 +64,14 @@ ipcMain.handle(
       const seconds = String(currentDate.getSeconds()).padStart(2, '0');
       const milliseconds = String(currentDate.getMilliseconds()).padStart(
         3,
-        '0'
+        '0',
       );
       const fileName = `${year}${month}${day}-${hours}${minutes}${seconds}${milliseconds}.${fileExtension}`;
       const fullStorePath = path.join(
         storePath,
         String(currentDate.getFullYear()),
         currentDate.toLocaleString('default', { month: 'short' }),
-        'media'
+        'media',
       );
       const newFilePath = path.join(fullStorePath, fileName);
 
@@ -83,14 +83,16 @@ ipcMain.handle(
       await fs.promises.writeFile(newFilePath, fileBuffer);
       return newFilePath;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Failed to save the file:', error);
+      return null;
     }
-  }
+  },
 );
 
-ipcMain.handle('open-file', async (event, data) => {
-  let attachments: string[] = [];
-  const storePath = data.storePath;
+ipcMain.handle('open-file', async (_event, data) => {
+  const attachments: string[] = [];
+  const { storePath } = data;
   const selected = await dialog.showOpenDialog({
     properties: ['openFile', 'multiSelections'],
     filters: [
@@ -105,36 +107,46 @@ ipcMain.handle('open-file', async (event, data) => {
     return attachments;
   }
 
-  for (const [index, filePath] of selectedFiles.entries()) {
-    const currentDate = new Date();
-    const year = String(currentDate.getFullYear()).slice(-2);
-    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const day = String(currentDate.getDate()).padStart(2, '0');
-    const hours = String(currentDate.getHours()).padStart(2, '0');
-    const minutes = String(currentDate.getMinutes()).padStart(2, '0');
-    const seconds = String(currentDate.getSeconds()).padStart(2, '0');
-    const selectedFileName = filePath.split(/[/\\]/).pop();
+  const copiedAttachments = await Promise.all(
+    selectedFiles.map(async (filePath, index) => {
+      const currentDate = new Date();
+      const year = String(currentDate.getFullYear()).slice(-2);
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const hours = String(currentDate.getHours()).padStart(2, '0');
+      const minutes = String(currentDate.getMinutes()).padStart(2, '0');
+      const seconds = String(currentDate.getSeconds()).padStart(2, '0');
+      const selectedFileName = filePath.split(/[/\\]/).pop();
 
-    if (!selectedFileName) continue;
+      if (!selectedFileName) {
+        return null;
+      }
 
-    const extension = selectedFileName.split('.').pop();
-    const fileName = `${year}${month}${day}-${hours}${minutes}${seconds}-${index}.${extension}`;
-    const fullStorePath = path.join(
-      storePath,
-      String(currentDate.getFullYear()),
-      currentDate.toLocaleString('default', { month: 'short' }),
-      'media'
-    );
-    const newFilePath = path.join(fullStorePath, fileName);
+      const extension = selectedFileName.split('.').pop();
+      const fileName = `${year}${month}${day}-${hours}${minutes}${seconds}-${index}.${extension}`;
+      const fullStorePath = path.join(
+        storePath,
+        String(currentDate.getFullYear()),
+        currentDate.toLocaleString('default', { month: 'short' }),
+        'media',
+      );
+      const newFilePath = path.join(fullStorePath, fileName);
 
-    try {
-      await fs.promises.mkdir(fullStorePath, { recursive: true });
-      await fs.promises.copyFile(filePath, newFilePath);
-      attachments.push(newFilePath);
-    } catch (err) {
-      console.error(err);
-    }
-  }
+      try {
+        await fs.promises.mkdir(fullStorePath, { recursive: true });
+        await fs.promises.copyFile(filePath, newFilePath);
+        return newFilePath;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(err);
+        return null;
+      }
+    }),
+  );
 
-  return attachments;
+  return attachments.concat(
+    copiedAttachments.filter((attachment): attachment is string =>
+      Boolean(attachment),
+    ),
+  );
 });

@@ -1,4 +1,5 @@
-export const RelevantIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function RelevantIcon(props) {
   return (
     <svg
       width="1385"
@@ -14,4 +15,4 @@ export const RelevantIcon = (props) => {
       />
     </svg>
   );
-};
+}

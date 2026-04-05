@@ -7,12 +7,11 @@ import {
   net,
   Menu,
   nativeTheme,
-  session,
 } from 'electron';
-import MenuBuilder from './menu';
-import { resolveHtmlPath } from './util';
 import fs from 'fs';
 import path from 'path';
+import MenuBuilder from './menu';
+import { resolveHtmlPath } from './util';
 import './ipc';
 import AppUpdater from './utils/autoUpdates';
 
@@ -40,7 +39,7 @@ const installExtensions = async () => {
   return installer
     .default(
       extensions.map((name) => installer[name]),
-      forceDownload
+      forceDownload,
     )
     .catch(console.log);
 };
@@ -120,6 +119,7 @@ const createWindow = async () => {
   });
 
   // setupAutoUpdater(mainWindow);
+  // eslint-disable-next-line no-new
   new AppUpdater(mainWindow);
 };
 
@@ -140,7 +140,7 @@ app
   .then(() => {
     protocol.handle('local', (request) => {
       const filePath = request.url.slice('local://'.length);
-      return net.fetch('file://' + filePath);
+      return net.fetch(`file://${filePath}`);
     });
 
     setupPilesFolder();

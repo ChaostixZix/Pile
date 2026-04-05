@@ -183,12 +183,12 @@ export default class MenuBuilder {
       .checkForUpdatesAndNotify()
       .then((updateCheckResult) => {
         if (!updateCheckResult?.updateInfo) {
-          this.mainWindow.webContents.send('update_not_available');
-          return;
+          return this.mainWindow.webContents.send('update_not_available');
         }
-        this.mainWindow.webContents.send('update_available');
+        return this.mainWindow.webContents.send('update_available');
       })
       .catch((error) => {
+        // eslint-disable-next-line no-console
         console.error('Error checking for updates:', error);
         this.mainWindow.webContents.send('update_error', error);
       });
@@ -230,7 +230,7 @@ export default class MenuBuilder {
                   accelerator: 'F11',
                   click: () => {
                     this.mainWindow.setFullScreen(
-                      !this.mainWindow.isFullScreen()
+                      !this.mainWindow.isFullScreen(),
                     );
                   },
                 },
@@ -248,7 +248,7 @@ export default class MenuBuilder {
                   accelerator: 'F11',
                   click: () => {
                     this.mainWindow.setFullScreen(
-                      !this.mainWindow.isFullScreen()
+                      !this.mainWindow.isFullScreen(),
                     );
                   },
                 },
@@ -267,7 +267,7 @@ export default class MenuBuilder {
             label: 'Documentation',
             click() {
               shell.openExternal(
-                'https://github.com/electron/electron/tree/main/docs#readme'
+                'https://github.com/electron/electron/tree/main/docs#readme',
               );
             },
           },

@@ -1,4 +1,5 @@
-export const PaperclipIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function PaperclipIcon(props) {
   return (
     <svg
       width="1600"
@@ -16,4 +17,4 @@ export const PaperclipIcon = (props) => {
       />
     </svg>
   );
-};
+}

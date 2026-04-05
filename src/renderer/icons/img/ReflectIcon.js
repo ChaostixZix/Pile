@@ -1,4 +1,5 @@
-export const ReflectIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function ReflectIcon(props) {
   return (
     <svg
       {...props}
@@ -17,4 +18,4 @@ export const ReflectIcon = (props) => {
       </g>
     </svg>
   );
-};
+}

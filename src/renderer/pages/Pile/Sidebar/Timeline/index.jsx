@@ -1,20 +1,8 @@
-import { useParams } from 'react-router-dom';
-import styles from './Timeline.module.scss';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Placeholder from '@tiptap/extension-placeholder';
-import {
-  useEffect,
-  useStatem,
-  useRef,
-  useState,
-  memo,
-  useMemo,
-  useCallback,
-} from 'react';
-import { DateTime } from 'luxon';
+/* eslint-disable react/prop-types */
+import { useEffect, useRef, useState, memo, useMemo, useCallback } from 'react';
 import { useTimelineContext } from 'renderer/context/TimelineContext';
 import { useIndexContext } from 'renderer/context/IndexContext';
+import styles from './Timeline.module.scss';
 
 function isToday(date) {
   const today = new Date();
@@ -26,33 +14,34 @@ function isToday(date) {
   );
 }
 
-const countEntriesByDate = (map, targetDate) => {
-  let count = 0;
-  const targetDateString = targetDate.toISOString().substring(0, 10);
-  for (const [key, value] of map.entries()) {
-    try {
-      const createdAtDate = new Date(value.createdAt);
-      const localDateString = new Date(
-        createdAtDate.getFullYear(),
-        createdAtDate.getMonth(),
-        createdAtDate.getDate()
-      )
-        .toISOString()
-        .substring(0, 10);
-      if (localDateString === targetDateString) {
-        count++;
-      }
-    } catch (error) {}
-  }
-  return count;
+const getLocalDateString = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    .toISOString()
+    .substring(0, 10);
+
+const countEntriesByDate = (entryMap, targetDate) => {
+  const targetDateString = getLocalDateString(targetDate);
+
+  return Array.from(entryMap.values()).reduce((count, entry) => {
+    const createdAtDate = new Date(entry.createdAt);
+
+    if (Number.isNaN(createdAtDate.getTime())) {
+      return count;
+    }
+
+    return getLocalDateString(createdAtDate) === targetDateString
+      ? count + 1
+      : count;
+  }, 0);
 };
 
 const renderCount = (count) => {
   const maxDots = Math.min(count, 48);
+
   return (
     <div className={styles.counts}>
-      {Array.from({ length: maxDots }, (_, i) => i).map((_, i) => (
-        <div className={styles.count} key={i}></div>
+      {Array.from({ length: maxDots }, (_, dotIndex) => (
+        <div className={styles.count} key={`count-${dotIndex}`} />
       ))}
     </div>
   );
@@ -64,26 +53,45 @@ const DayComponent = memo(({ date, scrollToDate }) => {
   const dayName = dayNames[date.getDay()];
   const dayNumber = date.getDate();
   const count = countEntriesByDate(index, date);
+  const isWeekend = dayName === 'S';
 
   return (
-    <div
-      onClick={() => {
-        scrollToDate(date);
-      }}
-      className={`${styles.day} ${isToday(date) && styles.today} ${
-        dayName == 'S' && styles.monday
+    <button
+      type="button"
+      onClick={() => scrollToDate(date)}
+      className={`${styles.day} ${isToday(date) ? styles.today : ''} ${
+        isWeekend ? styles.monday : ''
       }`}
     >
       {renderCount(count)}
-      <div className={styles.dayLine}></div>
+      <div className={styles.dayLine} />
       <div className={styles.dayName}>{dayName}</div>
       <div className={styles.dayNumber}>{dayNumber}</div>
-    </div>
+    </button>
   );
 });
 
+const buildDays = (startDate, endDate, scrollToDate) => {
+  const dayCount =
+    Math.floor(
+      (endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000),
+    ) + 1;
+
+  return Array.from({ length: dayCount }, (_, dayOffset) => {
+    const currentDate = new Date(startDate);
+    currentDate.setDate(startDate.getDate() + dayOffset);
+
+    return (
+      <DayComponent
+        key={currentDate.toISOString()}
+        date={currentDate}
+        scrollToDate={scrollToDate}
+      />
+    );
+  }).reverse();
+};
+
 const WeekComponent = memo(({ startDate, endDate, scrollToDate }) => {
-  const weekOfMonth = Math.floor(startDate.getDate() / 7) + 1;
   const monthNames = [
     'January',
     'February',
@@ -100,47 +108,15 @@ const WeekComponent = memo(({ startDate, endDate, scrollToDate }) => {
   ];
   const monthName = monthNames[startDate.getMonth()];
   const year = startDate.getFullYear();
-  let days = [];
-  for (
-    let date = new Date(startDate);
-    date <= endDate;
-    date.setDate(date.getDate() + 1)
-  ) {
-    days.push(
-      <DayComponent
-        key={date.toString()}
-        date={new Date(date)}
-        scrollToDate={scrollToDate}
-      />
-    );
-  }
-
-  const weekOfMonthText = () => {
-    switch (weekOfMonth) {
-      case 1:
-        return '1st week';
-        break;
-      case 2:
-        return '2nd week';
-        break;
-      case 3:
-        return '3rd week';
-        break;
-      case 4:
-        return '4th week';
-        break;
-      default:
-        return '';
-    }
-  };
+  const days = buildDays(startDate, endDate, scrollToDate);
 
   return (
     <div className={styles.week}>
       <div className={styles.text}>
         {monthName.substring(0, 3)} {year}
       </div>
-      {days.reverse()}
-      <div className={styles.line}></div>
+      {days}
+      <div className={styles.line} />
     </div>
   );
 });
@@ -154,61 +130,63 @@ const Timeline = memo(() => {
   const [parentEntries, setParentEntries] = useState([]);
   const [oldestDate, setOldestDate] = useState(new Date());
 
-  //  Extract parent entries
   useEffect(() => {
-    if (!index) return;
+    if (!index) {
+      return;
+    }
+
     const onlyParentEntries = Array.from(index).filter(
-      ([key, metadata]) => !metadata.isReply
+      ([, metadata]) => !metadata.isReply,
     );
 
-    const lastEntry = onlyParentEntries[onlyParentEntries.length - 1];
+    const lastEntry = onlyParentEntries.at(-1);
+
     if (lastEntry) {
-      const lastEntryDate = new Date(lastEntry[1].createdAt);
-      setOldestDate(lastEntryDate);
+      const [, lastEntryMetadata] = lastEntry;
+      setOldestDate(new Date(lastEntryMetadata.createdAt));
     }
 
     setParentEntries(onlyParentEntries);
   }, [index]);
 
-  // Identify most recent entry and it's date
-  // This is for placing the scroller at the right position
   useEffect(() => {
-    if (!parentEntries || parentEntries.length == 0) return;
-    if (visibleIndex == 0) return;
-    let current;
-    if (parentEntries && visibleIndex > 0 && parentEntries[visibleIndex - 1]) {
-      current = parentEntries[visibleIndex - 1][1];
+    if (!parentEntries.length || visibleIndex === 0) {
+      return;
     }
-    if (!current) return;
-    const createdAt = current.createdAt;
-    setClosestDate(createdAt);
-  }, [visibleIndex, parentEntries]);
+
+    const currentEntry = parentEntries[visibleIndex - 1]?.[1];
+
+    if (!currentEntry) {
+      return;
+    }
+
+    setClosestDate(currentEntry.createdAt);
+  }, [parentEntries, setClosestDate, visibleIndex]);
 
   const scrollToDate = useCallback(
     (targetDate) => {
-      try {
-        let closestIndex = -1;
-        let smallestDiff = Infinity;
+      const closestEntryIndex = parentEntries.reduce(
+        (closest, post, postIndex) => {
+          const postDate = new Date(post[1].createdAt);
+          const diff = Math.abs(targetDate - postDate);
 
-        parentEntries.forEach((post, index) => {
-          let postDate = new Date(post[1].createdAt);
-          let diff = Math.abs(targetDate - postDate);
-          if (diff < smallestDiff) {
-            smallestDiff = diff;
-            closestIndex = index;
+          if (diff < closest.smallestDiff) {
+            return { smallestDiff: diff, index: postIndex };
           }
-        });
-        scrollToIndex(closestIndex);
-      } catch (error) {
-        console.error('Failed to scroll to entry', error);
-      }
+
+          return closest;
+        },
+        { smallestDiff: Infinity, index: -1 },
+      ).index;
+
+      scrollToIndex(closestEntryIndex);
     },
-    [parentEntries]
+    [parentEntries, scrollToIndex],
   );
 
   const getWeeks = useCallback(() => {
-    let weeks = [];
-    let now = new Date();
+    const weeks = [];
+    const now = new Date();
     now.setHours(0, 0, 0, 0);
 
     let weekEnd = new Date(now);
@@ -220,8 +198,7 @@ const Timeline = memo(() => {
     let weekStart = new Date(now);
     weeks.push({ start: weekStart, end: weekEnd });
 
-    // Adding empty days to
-    let oldestDatePadded = new Date(oldestDate);
+    const oldestDatePadded = new Date(oldestDate);
     oldestDatePadded.setDate(oldestDatePadded.getDate() - 40);
 
     while (weekStart > oldestDatePadded) {
@@ -235,48 +212,44 @@ const Timeline = memo(() => {
     return weeks;
   }, [oldestDate]);
 
-  const createWeeks = () =>
-    getWeeks().map((week, index) => (
-      <WeekComponent
-        key={index}
-        startDate={week.start}
-        endDate={week.end}
-        scrollToDate={scrollToDate}
-      />
-    ));
-
-  let weeks = useMemo(createWeeks, [parentEntries.length]);
+  const weeks = useMemo(
+    () =>
+      getWeeks().map((week) => (
+        <WeekComponent
+          key={`${week.start.toISOString()}-${week.end.toISOString()}`}
+          startDate={week.start}
+          endDate={week.end}
+          scrollToDate={scrollToDate}
+        />
+      )),
+    [getWeeks, scrollToDate],
+  );
 
   useEffect(() => {
-    if (!scrubRef.current) return;
-    if (!scrollRef.current) return;
-    let oneDay = 24 * 60 * 60 * 1000;
+    if (!scrubRef.current || !scrollRef.current) {
+      return;
+    }
+
+    const oneDay = 24 * 60 * 60 * 1000;
     const now = new Date();
     const past = new Date(closestDate);
-    let diffInMilliSeconds = Math.abs(now - past);
-    let diffInDays = Math.round(diffInMilliSeconds / oneDay);
-
-    let scrollOffset = 0;
+    const diffInMilliseconds = Math.abs(now - past);
+    const diffInDays = Math.round(diffInMilliseconds / oneDay);
     const distanceFromTop = 22 * diffInDays + 10;
-
-    if (distanceFromTop > 400) {
-      scrollOffset = distanceFromTop - 300;
-    } else {
-      scrollOffset = 0;
-    }
+    const scrollOffset = distanceFromTop > 400 ? distanceFromTop - 300 : 0;
 
     scrollRef.current.scroll({
       top: scrollOffset,
       behavior: 'smooth',
     });
 
-    scrubRef.current.style.top = distanceFromTop + 'px';
+    scrubRef.current.style.top = `${distanceFromTop}px`;
   }, [closestDate]);
 
   return (
     <div ref={scrollRef} className={styles.timeline}>
       {weeks}
-      <div ref={scrubRef} className={styles.scrubber}></div>
+      <div ref={scrubRef} className={styles.scrubber} />
     </div>
   );
 });

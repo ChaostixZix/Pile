@@ -1,82 +1,92 @@
+/* eslint react/prop-types: 0 */
 import {
   useState,
   createContext,
   useContext,
   useEffect,
   useCallback,
+  useMemo,
 } from 'react';
-import { useLocation } from 'react-router-dom';
 import { usePilesContext } from './PilesContext';
 
 export const HighlightsContext = createContext();
 
-export const HighlightsContextProvider = ({ children }) => {
+export function HighlightsContextProvider({ children }) {
   const { currentPile, getCurrentPilePath } = usePilesContext();
   const [open, setOpen] = useState(false);
   const [highlights, setHighlights] = useState(new Map());
 
-  const openHighlights = (e) => {
+  const openHighlights = useCallback(() => {
     setOpen(true);
-  };
+  }, []);
 
-  const onOpenChange = (open) => {
-    setOpen(open);
-  };
-
-  useEffect(() => {
-    if (currentPile) {
-      loadHighlights(getCurrentPilePath());
-    }
-  }, [currentPile]);
+  const onOpenChange = useCallback((nextOpen) => {
+    setOpen(nextOpen);
+  }, []);
 
   const loadHighlights = useCallback(async (pilePath) => {
-    const newHighlights = await window.electron.ipc.invoke(
+    const nextHighlights = await window.electron.ipc.invoke(
       'highlights-load',
-      pilePath
+      pilePath,
     );
-    const newMap = new Map(newHighlights);
-    setHighlights(newMap);
+    setHighlights(new Map(nextHighlights));
   }, []);
+
+  useEffect(() => {
+    if (!currentPile) {
+      return;
+    }
+
+    loadHighlights(getCurrentPilePath());
+  }, [currentPile, getCurrentPilePath, loadHighlights]);
 
   const refreshHighlights = useCallback(async () => {
-    const newHighlights = await window.electron.ipc.invoke('highlights-get');
-    const newMap = new Map(newHighlights);
-    setTags(newMap);
+    const nextHighlights = await window.electron.ipc.invoke('highlights-get');
+    setHighlights(new Map(nextHighlights));
   }, []);
 
-  const createHighlight = useCallback(async (highlight) => {
-    window.electron.ipc
-      .invoke('highlights-create', highlight)
-      .then((highlights) => {
-        setHighlights(highlights);
-      });
-  }, []);
+  const createHighlight = useCallback(
+    async (highlight) => {
+      await window.electron.ipc.invoke('highlights-create', highlight);
+      await refreshHighlights();
+    },
+    [refreshHighlights],
+  );
 
-  const deleteHighlight = useCallback(async (highlight) => {
-    window.electron.ipc
-      .invoke('highlights-delete', highlight)
-      .then((highlights) => {
-        setHighlights(highlights);
-      });
-  }, []);
+  const deleteHighlight = useCallback(
+    async (highlight) => {
+      await window.electron.ipc.invoke('highlights-delete', highlight);
+      await refreshHighlights();
+    },
+    [refreshHighlights],
+  );
 
-  const updateHighlight = (highlight, content) => {};
-
-  const highlightsContextValue = {
-    open,
-    openHighlights,
-    onOpenChange,
-    highlights,
-    refreshHighlights,
-    createHighlight,
-    deleteHighlight,
-  };
+  const highlightsContextValue = useMemo(
+    () => ({
+      open,
+      openHighlights,
+      onOpenChange,
+      highlights,
+      refreshHighlights,
+      createHighlight,
+      deleteHighlight,
+    }),
+    [
+      open,
+      openHighlights,
+      onOpenChange,
+      highlights,
+      refreshHighlights,
+      createHighlight,
+      deleteHighlight,
+    ],
+  );
 
   return (
     <HighlightsContext.Provider value={highlightsContextValue}>
       {children}
     </HighlightsContext.Provider>
   );
-};
+}
 
 export const useHighlightsContext = () => useContext(HighlightsContext);

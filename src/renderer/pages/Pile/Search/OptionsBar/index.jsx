@@ -1,28 +1,17 @@
-import {
-  SettingsIcon,
-  CrossIcon,
-  ReflectIcon,
-  RefreshIcon,
-  DiscIcon,
-  DownloadIcon,
-  FlameIcon,
-  InfoIcon,
-  SearchIcon,
-  PaperclipIcon,
-  HighlightIcon,
-  RelevantIcon,
-} from 'renderer/icons';
-import styles from './OptionsBar.module.scss';
+/* eslint-disable react/prop-types */
 import * as Switch from '@radix-ui/react-switch';
+import { PaperclipIcon, HighlightIcon, RelevantIcon } from 'renderer/icons';
+import styles from './OptionsBar.module.scss';
 
-export default function OptionsBar({ options, setOptions, onSubmit }) {
-  const flipValue = (e) => {
-    const key = e.target.name;
-    setOptions((prev) => ({ ...prev, [key]: !prev[key] }));
+export default function OptionsBar({ options, setOptions }) {
+  const flipValue = (event) => {
+    const { name } = event.currentTarget;
+    setOptions((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const toggleRecent = (e) => {
-    setOptions((prev) => ({ ...prev, sortOrder: e.target.name }));
+  const toggleRecent = (event) => {
+    const { name } = event.currentTarget;
+    setOptions((prev) => ({ ...prev, sortOrder: name }));
   };
 
   const toggleSearchMode = () => {
@@ -33,48 +22,53 @@ export default function OptionsBar({ options, setOptions, onSubmit }) {
     <div className={styles.container}>
       <div className={styles.left}>
         <button
+          type="button"
           className={`${styles.button} ${
             options.sortOrder === 'relevance' && styles.active
           }`}
-          name={'relevance'}
+          name="relevance"
           onClick={toggleRecent}
         >
           <RelevantIcon className={styles.icon} /> Relevance
         </button>
         <button
+          type="button"
           className={`${styles.button} ${
             options.sortOrder === 'mostRecent' && styles.active
           }`}
-          name={'mostRecent'}
+          name="mostRecent"
           onClick={toggleRecent}
         >
           ↑ Recent
         </button>
         <button
+          type="button"
           className={`${styles.button} ${
             options.sortOrder === 'oldest' && styles.active
           }`}
-          name={'oldest'}
+          name="oldest"
           onClick={toggleRecent}
         >
           ↓ Oldest
         </button>
         <div className={styles.sep}>•</div>
         <button
+          type="button"
           className={`${styles.button} ${
             options.onlyHighlighted && styles.active
           }`}
-          name={'onlyHighlighted'}
+          name="onlyHighlighted"
           onClick={flipValue}
         >
           <HighlightIcon className={styles.icon} />
           Highlighted
         </button>
         <button
+          type="button"
           className={`${styles.button} ${
             options.hasAttachments && styles.active
           }`}
-          name={'hasAttachments'}
+          name="hasAttachments"
           onClick={flipValue}
         >
           <PaperclipIcon className={styles.icon} /> Attachments
@@ -82,11 +76,12 @@ export default function OptionsBar({ options, setOptions, onSubmit }) {
       </div>
       <div className={styles.right}>
         <div className={styles.switch}>
-          <label className={styles.Label} htmlFor="semantic-search">
+          <div id="semantic-search-label" className={styles.Label}>
             Semantic
-          </label>
+          </div>
           <Switch.Root
-            id={'semantic-search'}
+            id="semantic-search"
+            aria-labelledby="semantic-search-label"
             className={styles.SwitchRoot}
             checked={options.semanticSearch}
             onCheckedChange={toggleSearchMode}

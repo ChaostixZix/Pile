@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import './App.scss';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -15,8 +16,8 @@ import { LinksContextProvider } from './context/LinksContext';
 import { ToastsContextProvider } from './context/ToastsContext';
 import { AutoUpdateContextProvider } from './context/AutoUpdateContext';
 
-if ('scrollRestoration' in history) {
-  history.scrollRestoration = 'manual';
+if ('scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
 }
 
 const transition = {
@@ -26,7 +27,7 @@ const transition = {
   duration: 0.1,
 };
 
-const AnimatedPage = ({ children, _key = '', down = false }) => {
+function AnimatedPage({ children, _key = '', down = false }) {
   return (
     <motion.div
       key={_key}
@@ -38,7 +39,7 @@ const AnimatedPage = ({ children, _key = '', down = false }) => {
       {children}
     </motion.div>
   );
-};
+}
 
 export default function App() {
   const location = useLocation();

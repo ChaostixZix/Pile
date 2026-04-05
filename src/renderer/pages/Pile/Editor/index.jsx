@@ -1,5 +1,3 @@
-import './ProseMirror.scss';
-import styles from './Editor.module.scss';
 import { useCallback, useState, useEffect, useRef, memo } from 'react';
 import { Extension } from '@tiptap/core';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -12,15 +10,16 @@ import { DiscIcon, PhotoIcon, TrashIcon, TagIcon } from 'renderer/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { postFormat } from 'renderer/utils/fileOperations';
 import { useParams } from 'react-router-dom';
-import TagButton from './TagButton';
-import TagList from './TagList';
-import Attachments from './Attachments';
 import usePost from 'renderer/hooks/usePost';
-import ProseMirrorStyles from './ProseMirror.scss';
 import { useAIContext } from 'renderer/context/AIContext';
 import useThread from 'renderer/hooks/useThread';
-import LinkPreviews from './LinkPreviews';
 import { useToastsContext } from 'renderer/context/ToastsContext';
+import Attachments from './Attachments';
+import TagList from './TagList';
+import TagButton from './TagButton';
+import styles from './Editor.module.scss';
+import ProseMirrorStyles from './ProseMirror.scss';
+import LinkPreviews from './LinkPreviews';
 
 // Escape special characters
 const escapeRegExp = (string) => {
@@ -30,10 +29,7 @@ const escapeRegExp = (string) => {
 const highlightTerms = (text, term) => {
   if (!term.trim()) return text;
   const regex = new RegExp(`(${escapeRegExp(term)})`, 'gi');
-  return text.replace(
-    regex,
-    '<span class="' + styles.highlight + '">$1</span>'
-  );
+  return text.replace(regex, `<span class="${styles.highlight}">$1</span>`);
 };
 
 const Editor = memo(
@@ -125,7 +121,7 @@ const Editor = memo(
         EnterSubmitExtension,
       ],
       editorProps: {
-        handlePaste: function (view, event, slice) {
+        handlePaste(view, event, slice) {
           const items = Array.from(event.clipboardData?.items || []);
           let imageHandled = false; // flag to track if an image was handled
 
@@ -140,8 +136,8 @@ const Editor = memo(
           }
           return imageHandled;
         },
-        handleDrop: function (view, event, slice, moved) {
-          let imageHandled = false; // flag to track if an image was handled
+        handleDrop(view, event, slice, moved) {
+          const imageHandled = false; // flag to track if an image was handled
           if (
             !moved &&
             event.dataTransfer &&
@@ -157,7 +153,7 @@ const Editor = memo(
         },
       },
       autofocus: true,
-      editable: editable,
+      editable,
       content: post?.content || '',
       onUpdate: ({ editor }) => {
         setContent(editor.getHTML());
@@ -319,7 +315,7 @@ const Editor = memo(
       <div className={`${styles.frame} ${isNew && styles.isNew}`}>
         {editable ? (
           <EditorContent
-            key={'new'}
+            key="new"
             className={`${styles.editor} ${isBig() && styles.editorBig} ${
               isAIResponding && styles.responding
             }`}
@@ -394,7 +390,7 @@ const Editor = memo(
         )}
       </div>
     );
-  }
+  },
 );
 
 export default Editor;

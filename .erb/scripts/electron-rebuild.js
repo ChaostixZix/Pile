@@ -1,10 +1,12 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
-import { dependencies } from '../../release/app/package.json';
+import appPackage from '../../release/app/package.json';
 import webpackPaths from '../configs/webpack.paths';
 
+const dependencies = appPackage.dependencies || {};
+
 if (
-  Object.keys(dependencies || {}).length > 0 &&
+  Object.keys(dependencies).length > 0 &&
   fs.existsSync(webpackPaths.appNodeModulesPath)
 ) {
   const electronRebuildCmd =

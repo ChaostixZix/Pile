@@ -1,4 +1,5 @@
-export const PersonIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function PersonIcon(props) {
   return (
     <svg
       {...props}
@@ -16,4 +17,4 @@ export const PersonIcon = (props) => {
       />
     </svg>
   );
-};
+}

@@ -1,7 +1,8 @@
-export default function Waiting(props) {
+/* eslint-disable react/prop-types */
+export default function Waiting({ className }) {
   return (
     <svg
-      {...props}
+      className={className}
       xmlns="http://www.w3.org/2000/svg"
       width="38"
       height="38"

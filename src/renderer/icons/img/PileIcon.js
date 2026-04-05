@@ -1,4 +1,5 @@
-export const PileIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function PileIcon(props) {
   return (
     <svg
       {...props}
@@ -106,4 +107,4 @@ export const PileIcon = (props) => {
       />
     </svg>
   );
-};
+}

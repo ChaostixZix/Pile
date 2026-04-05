@@ -1,4 +1,3 @@
-import styles from './Chat.module.scss';
 import {
   SettingsIcon,
   CrossIcon,
@@ -17,15 +16,16 @@ import {
   usePilesContext,
 } from 'renderer/context/PilesContext';
 import { useIndexContext } from 'renderer/context/IndexContext';
-import Post from '../Posts/Post';
 import TextareaAutosize from 'react-textarea-autosize';
+import { AnimatePresence, motion } from 'framer-motion';
+import useChat from 'renderer/hooks/useChat';
+import Post from '../Posts/Post';
 import Waiting from '../Toasts/Toast/Loaders/Waiting';
 import Thinking from '../Toasts/Toast/Loaders/Thinking';
 import Status from './Status';
-import { AnimatePresence, motion } from 'framer-motion';
 import VirtualList from './VirtualList';
 import Blobs from './Blobs';
-import useChat from 'renderer/hooks/useChat';
+import styles from './Chat.module.scss';
 
 export default function Chat() {
   const { validKey } = useAIContext();
@@ -96,7 +96,7 @@ export default function Chat() {
 
   const osStyles = useMemo(
     () => (window.electron.isMac ? styles.mac : styles.win),
-    []
+    [],
   );
 
   return (
@@ -149,7 +149,7 @@ export default function Chat() {
               <div className={styles.inputBar}>
                 <AnimatePresence>
                   <div className={styles.holder}>
-                    <div className={styles.inputbaroverlay}></div>
+                    <div className={styles.inputbaroverlay} />
                     <div className={styles.bar}>
                       <TextareaAutosize
                         value={text}

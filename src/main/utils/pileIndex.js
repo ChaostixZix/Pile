@@ -1,11 +1,20 @@
 const fs = require('fs');
 const path = require('path');
-const glob = require('glob');
 const matter = require('gray-matter');
 const pileSearchIndex = require('./pileSearchIndex');
 const pileEmbeddings = require('./pileEmbeddings');
 const { walk } = require('../util');
 const { convertHTMLToPlainText } = require('../util');
+
+const sortMap = (map) => {
+  const sortedMap = new Map(
+    [...map.entries()].sort(
+      (a, b) => new Date(b[1].createdAt) - new Date(a[1].createdAt),
+    ),
+  );
+
+  return sortedMap;
+};
 
 class PileIndex {
   constructor() {
@@ -14,22 +23,12 @@ class PileIndex {
     this.index = new Map();
   }
 
-  sortMap(map) {
-    let sortedMap = new Map(
-      [...map.entries()].sort(
-        (a, b) => new Date(b[1].createdAt) - new Date(a[1].createdAt)
-      )
-    );
-
-    return sortedMap;
-  }
-
   resetIndex() {
     this.index.clear();
   }
 
   async load(pilePath) {
-    if (!pilePath) return;
+    if (!pilePath) return this.index;
 
     // a different pile is being loaded
     if (pilePath !== this.pilePath) {
@@ -42,7 +41,7 @@ class PileIndex {
     if (fs.existsSync(indexFilePath)) {
       const data = fs.readFileSync(indexFilePath);
       const loadedIndex = new Map(JSON.parse(data));
-      const sortedIndex = this.sortMap(loadedIndex);
+      const sortedIndex = sortMap(loadedIndex);
       this.index = sortedIndex;
     } else {
       // init empty index
@@ -70,7 +69,7 @@ class PileIndex {
         this.index.set(relativeFilePath, data);
       });
 
-      this.index = this.sortMap(this.index);
+      this.index = sortMap(this.index);
       return this.index;
     });
   };
@@ -115,7 +114,7 @@ class PileIndex {
   add(relativeFilePath) {
     const filePath = path.join(this.pilePath, relativeFilePath);
     const fileContent = fs.readFileSync(filePath, 'utf8');
-    const { data, content } = matter(fileContent);
+    const { data } = matter(fileContent);
     this.index.set(relativeFilePath, data);
     // add to search and vector index
     pileSearchIndex.initialize(this.pilePath, this.index);
@@ -126,31 +125,33 @@ class PileIndex {
 
   getThreadAsText(filePath) {
     try {
-      let fullPath = path.join(this.pilePath, filePath);
-      let fileContent = fs.readFileSync(fullPath, 'utf8');
-      let { content, data: metedata } = matter(fileContent);
+      const fullPath = path.join(this.pilePath, filePath);
+      const fileContent = fs.readFileSync(fullPath, 'utf8');
+      const { content: initialContent, data: metadata } = matter(fileContent);
+      let content = initialContent;
 
-      content =
-        `First entry at ${new Date(metedata.createdAt).toString()}:\n ` +
-        convertHTMLToPlainText(content);
+      content = `First entry at ${new Date(metadata.createdAt).toString()}:\n ${convertHTMLToPlainText(
+        content,
+      )}`;
 
       // concat the contents of replies
-      for (let replyPath of metedata.replies) {
+      metadata.replies.forEach((replyPath) => {
         try {
-          let replyFullPath = path.join(this.pilePath, replyPath);
-          let replyFileContent = fs.readFileSync(replyFullPath, 'utf8');
-          let { content: replyContent, data: replyMetadata } =
+          const replyFullPath = path.join(this.pilePath, replyPath);
+          const replyFileContent = fs.readFileSync(replyFullPath, 'utf8');
+          const { content: replyContent, data: replyMetadata } =
             matter(replyFileContent);
           content += `\n\n Reply at ${new Date(
-            replyMetadata.createdAt
+            replyMetadata.createdAt,
           ).toString()}:\n  ${convertHTMLToPlainText(replyContent)}`;
         } catch (error) {
-          continue;
+          // Ignore missing or unreadable replies and keep building the thread.
         }
-      }
+      });
       return content;
     } catch (error) {
       console.log('Failed to get thread as text');
+      return '';
     }
   }
 
@@ -159,26 +160,21 @@ class PileIndex {
   updateParentOfReply(replyPath) {
     const reply = this.index.get(replyPath);
     if (reply.isReply) {
-      for (let [filePath, metadata] of this.index) {
-        if (!metadata.isReply) {
-          if (metadata.replies.includes(replyPath)) {
-            // this is the parent
-            metadata.replies = metadata.replies.filter((p) => {
-              return p !== replyPath;
-            });
-            metadata.replies.push(filePath);
-            this.index.set(filePath, metadata);
-            this.save();
-          }
+      Array.from(this.index.entries()).forEach(([filePath, metadata]) => {
+        if (!metadata.isReply && metadata.replies.includes(replyPath)) {
+          // this is the parent
+          metadata.replies = metadata.replies.filter((p) => p !== replyPath);
+          metadata.replies.push(filePath);
+          this.index.set(filePath, metadata);
+          this.save();
         }
-      }
+      });
     }
   }
 
   regenerateEmbeddings() {
     pileEmbeddings.regenerateEmbeddings(this.index);
     this.save();
-    return;
   }
 
   update(relativeFilePath, data) {
@@ -202,14 +198,14 @@ class PileIndex {
       fs.mkdirSync(this.pilePath, { recursive: true });
     }
 
-    const sortedIndex = this.sortMap(this.index);
+    const sortedIndex = sortMap(this.index);
     this.index = sortedIndex;
     const filePath = path.join(this.pilePath, this.fileName);
     const entries = this.index.entries();
 
     if (!entries) return;
 
-    let strMap = JSON.stringify(Array.from(entries));
+    const strMap = JSON.stringify(Array.from(entries));
     fs.writeFileSync(filePath, strMap);
   }
 }

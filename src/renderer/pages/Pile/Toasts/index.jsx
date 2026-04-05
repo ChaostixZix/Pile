@@ -1,25 +1,24 @@
-import styles from './Toasts.module.scss';
 import { useToastsContext } from 'renderer/context/ToastsContext';
-import Logo from 'renderer/pages/Home/logo';
-import Toast from './Toast';
 import { AnimatePresence } from 'framer-motion';
+import Toast from './Toast';
+import styles from './Toasts.module.scss';
 
 export default function Toasts() {
-  const { notifications, addNotification } = useToastsContext();
+  const { notifications } = useToastsContext();
 
   const renderNotifications = () => {
-    if (notifications.length === 0) return;
+    if (notifications.length === 0) return null;
 
-    return notifications.map((n, i) => {
-      if (i == 0) {
-        return <Toast key={n.id} notification={n} />;
-      }
-    });
+    return notifications
+      .filter((_, index) => index === 0)
+      .map((notification) => (
+        <Toast key={notification.id} notification={notification} />
+      ));
   };
 
   return (
     <div className={styles.container}>
-      <AnimatePresence mode={'wait'}>{renderNotifications()}</AnimatePresence>
+      <AnimatePresence mode="wait">{renderNotifications()}</AnimatePresence>
     </div>
   );
 }

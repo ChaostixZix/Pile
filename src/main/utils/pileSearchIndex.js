@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const lunr = require('lunr');
 const matter = require('gray-matter');
-const { BrowserWindow } = require('electron');
 const { convertHTMLToPlainText } = require('../util');
 
 class PileSearchIndex {
@@ -31,24 +30,26 @@ class PileSearchIndex {
         builder.field('isReply');
         builder.field('isAI');
 
-        for (let [filePath, metadata] of index) {
+        Array.from(index.entries()).forEach(([filePath, metadata]) => {
           try {
             //  we only index parent documents
             // the replies are concatenated to the contents
-            if (metadata.isReply) continue;
-            let fullPath = path.join(this.pilePath, filePath);
-            let fileContent = fs.readFileSync(fullPath, 'utf8');
+            if (metadata.isReply) {
+              return;
+            }
+            const fullPath = path.join(this.pilePath, filePath);
+            const fileContent = fs.readFileSync(fullPath, 'utf8');
             let { content } = matter(fileContent);
 
             // concat the contents of replies
-            for (let replyPath of metadata.replies) {
-              let replyFullPath = path.join(this.pilePath, replyPath);
-              let replyFileContent = fs.readFileSync(replyFullPath, 'utf8');
-              let { content: replyContent } = matter(replyFileContent);
-              content += '\n' + replyContent;
-            }
+            metadata.replies.forEach((replyPath) => {
+              const replyFullPath = path.join(this.pilePath, replyPath);
+              const replyFileContent = fs.readFileSync(replyFullPath, 'utf8');
+              const { content: replyContent } = matter(replyFileContent);
+              content += `\n${replyContent}`;
+            });
 
-            let doc = {
+            const doc = {
               id: filePath,
               title: metadata.title,
               attachments: metadata.attachments.join(' '),
@@ -64,12 +65,13 @@ class PileSearchIndex {
           } catch (error) {
             console.error('Failed to add entry to search index: ', filePath);
           }
-        }
+        });
       });
 
       return this.index;
     } catch (error) {
       console.error('Error loading the index:', error);
+      return null;
     }
   }
 

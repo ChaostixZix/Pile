@@ -8,6 +8,11 @@
     "strict": true,
     "sourceMap": true,
     "moduleResolution": "node",
+    "baseUrl": "./src",
+    "paths": {
+      "renderer/*": ["renderer/*"],
+      "main/*": ["main/*"]
+    },
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,

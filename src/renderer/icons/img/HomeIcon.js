@@ -1,4 +1,5 @@
-export const HomeIcon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function HomeIcon(props) {
   return (
     <svg
       {...props}
@@ -14,4 +15,4 @@ export const HomeIcon = (props) => {
       />
     </svg>
   );
-};
+}

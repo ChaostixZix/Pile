@@ -8,6 +8,17 @@ let micInputStream = null;
 let fileOutputStream = null;
 let currentTimeout = null;
 
+function stopRecording() {
+  if (micInstance) {
+    micInstance.stop();
+  }
+
+  if (currentTimeout) {
+    clearTimeout(currentTimeout);
+    currentTimeout = null;
+  }
+}
+
 const startRecording = (outputDirectory) => {
   stopRecording(); // Ensure to stop any ongoing recording first
 
@@ -26,17 +37,6 @@ const startRecording = (outputDirectory) => {
   micInputStream.pipe(fileOutputStream);
 
   micInstance.start();
-};
-
-const stopRecording = () => {
-  if (micInstance) {
-    micInstance.stop();
-  }
-
-  if (currentTimeout) {
-    clearTimeout(currentTimeout);
-    currentTimeout = null;
-  }
 };
 
 parentPort.on('message', (message) => {

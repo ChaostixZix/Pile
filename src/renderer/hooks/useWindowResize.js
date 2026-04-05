@@ -1,3 +1,4 @@
+/* eslint-disable import/prefer-default-export */
 import { useState, useLayoutEffect } from 'react';
 
 export const useWindowResize = () => {

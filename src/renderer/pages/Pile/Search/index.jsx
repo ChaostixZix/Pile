@@ -1,39 +1,19 @@
-import styles from './Search.module.scss';
-import {
-  SettingsIcon,
-  CrossIcon,
-  ReflectIcon,
-  RefreshIcon,
-  DiscIcon,
-  DownloadIcon,
-  FlameIcon,
-  SearchIcon,
-} from 'renderer/icons';
+/* eslint-disable react/prop-types */
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { useAIContext } from 'renderer/context/AIContext';
-import {
-  availableThemes,
-  usePilesContext,
-} from 'renderer/context/PilesContext';
 import { useIndexContext } from 'renderer/context/IndexContext';
-import Post from '../Posts/Post';
-import TextareaAutosize from 'react-textarea-autosize';
-import Waiting from '../Toasts/Toast/Loaders/Waiting';
-import Thinking from '../Toasts/Toast/Loaders/Thinking';
-import InputBar from './InputBar';
+import { SearchIcon } from 'renderer/icons';
 import { AnimatePresence, motion } from 'framer-motion';
+import Post from '../Posts/Post';
+import InputBar from './InputBar';
+import styles from './Search.module.scss';
 import OptionsBar from './OptionsBar';
-import VirtualList from '../Posts/VirtualList';
 
 const filterResults = (results, options) => {
   const filtered = results.filter((result) => {
-    // Filter by highlight
     const highlightCondition = options.onlyHighlighted
       ? result.highlight != null
       : true;
-
-    // Filter by attachments
     const mediaCondition = options.hasAttachments
       ? result.attachments.length > 0
       : true;
@@ -41,7 +21,6 @@ const filterResults = (results, options) => {
     return highlightCondition && mediaCondition;
   });
 
-  // Sort the filtered results based on the sortOrder option
   if (options.sortOrder === 'oldest') {
     filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   } else if (options.sortOrder === 'mostRecent') {
@@ -52,18 +31,8 @@ const filterResults = (results, options) => {
 };
 
 export default function Search() {
-  const { currentTheme, setTheme } = usePilesContext();
-  const {
-    initVectorIndex,
-    rebuildVectorIndex,
-    query,
-    search,
-    searchOpen,
-    setSearchOpen,
-    vectorSearch,
-  } = useIndexContext();
+  const { search, vectorSearch } = useIndexContext();
   const [container, setContainer] = useState(null);
-  const [ready, setReady] = useState(false);
   const [text, setText] = useState('');
   const [querying, setQuerying] = useState(false);
   const [response, setResponse] = useState([]);
@@ -76,40 +45,30 @@ export default function Search() {
     semanticSearch: false,
   });
 
-  const onChangeText = (e) => {
-    setText(e.target.value);
+  const onChangeText = (event) => {
+    setText(event.target.value);
   };
 
-  const onSubmit = useCallback(() => {
-    if (text === '') return;
-    setQuerying(true);
-
-    if (options.semanticSearch) {
-      vectorSearch(text).then((res) => {
-        setResponse(res);
-        setQuerying(false);
-      });
-
+  const onSubmit = useCallback(async () => {
+    if (text === '') {
       return;
     }
 
-    search(text).then((res) => {
-      setResponse(res);
+    setQuerying(true);
+
+    try {
+      const searchFn = options.semanticSearch ? vectorSearch : search;
+      const result = await searchFn(text);
+      setResponse(result);
+    } finally {
       setQuerying(false);
-    });
-  }, [options, text]);
+    }
+  }, [options.semanticSearch, search, text, vectorSearch]);
 
   useEffect(() => {
     onSubmit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options.semanticSearch]);
-
-  const handleKeyPress = (event) => {
-    if (event.key === 'Enter') {
-      onSubmit();
-      event.preventDefault();
-      return false;
-    }
-  };
 
   const containerVariants = {
     show: {
@@ -124,35 +83,30 @@ export default function Search() {
     show: { opacity: 1, y: 0 },
   };
 
-  const filtered = useMemo(() => {
-    const filtered = filterResults(response, options);
-    return filtered;
-  }, [response, options]);
+  const filtered = useMemo(
+    () => filterResults(response, options),
+    [response, options],
+  );
 
   const renderResponse = () => {
-    return filtered.map((source, index) => {
+    return filtered.map((source) => {
       const uniqueKey = source.ref;
-      if (!uniqueKey) return null;
+
+      if (!uniqueKey) {
+        return null;
+      }
+
       return (
         <motion.div
           variants={itemVariants}
           key={uniqueKey}
           className={styles.post}
         >
-          <Post
-            key={`post-${uniqueKey}`}
-            postPath={uniqueKey}
-            searchTerm={text}
-          />
+          <Post postPath={uniqueKey} searchTerm={text} />
         </motion.div>
       );
     });
   };
-
-  const osStyles = useMemo(
-    () => (window.electron.isMac ? styles.mac : styles.win),
-    []
-  );
 
   return (
     <>
@@ -168,37 +122,30 @@ export default function Search() {
             <div className={styles.wrapper}>
               <Dialog.Title className={styles.DialogTitle}>
                 <InputBar
-                  setReady={setReady}
                   value={text}
                   onChange={onChangeText}
                   onSubmit={onSubmit}
                   querying={querying}
                 />
-                <OptionsBar
-                  options={options}
-                  setOptions={setOptions}
-                  onSubmit={onSubmit}
-                />
+                <OptionsBar options={options} setOptions={setOptions} />
               </Dialog.Title>
-              {filtered && (
-                <div className={styles.meta}>
-                  {filtered?.length} thread{filtered?.length !== 1 && 's'}
-                  <div className={styles.sep}></div>
-                  {filtered.reduce(
-                    (a, i) => a + 1 + i?.replies?.length,
-                    0
-                  )}{' '}
-                  entries
-                  <div className={styles.sep}></div>
-                  {filtered.filter((post) => post.highlight).length} highlighted
-                  <div className={styles.sep}></div>
-                  {filtered.reduce(
-                    (a, i) => a + i?.attachments?.length,
-                    0
-                  )}{' '}
-                  attachments
-                </div>
-              )}
+              <div className={styles.meta}>
+                {filtered.length} thread{filtered.length !== 1 && 's'}
+                <div className={styles.sep} />
+                {filtered.reduce(
+                  (count, item) => count + 1 + (item.replies?.length ?? 0),
+                  0,
+                )}{' '}
+                entries
+                <div className={styles.sep} />
+                {filtered.filter((post) => post.highlight).length} highlighted
+                <div className={styles.sep} />
+                {filtered.reduce(
+                  (count, item) => count + (item.attachments?.length ?? 0),
+                  0,
+                )}{' '}
+                attachments
+              </div>
               <AnimatePresence mode="wait">
                 <motion.ul
                   initial="hidden"
@@ -210,8 +157,8 @@ export default function Search() {
                 </motion.ul>
               </AnimatePresence>
             </div>
-            <div className={styles.gradient}></div>
-            <div className={styles.gradient2}></div>
+            <div className={styles.gradient} />
+            <div className={styles.gradient2} />
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

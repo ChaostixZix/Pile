@@ -1,4 +1,5 @@
-export const Search2Icon = (props) => {
+/* eslint-disable import/prefer-default-export, react/jsx-props-no-spreading */
+export function Search2Icon(props) {
   return (
     <svg
       width="961"
@@ -14,4 +15,4 @@ export const Search2Icon = (props) => {
       />
     </svg>
   );
-};
+}
